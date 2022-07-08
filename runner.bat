@@ -1,1 +1,1 @@
-scrapy crawl elpalaciode -o elpalaciode.json
+scrapy crawl elpalaciode
