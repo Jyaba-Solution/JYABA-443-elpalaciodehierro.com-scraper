@@ -48,7 +48,7 @@ class ElpalaciodeSpider(scrapy.spiders.SitemapSpider):
             item['Store Address']=''
             item['Stock']= response.css('meta[itemprop=availability]::attr(content)').get()
             item['UPC WM']=response.css('meta[itemprop=gtin14]::attr(content)').get().zfill(16) if response.css('meta[itemprop=gtin14]::attr(content)').get() else ''
-            item['Final Price']= min(low_price, high_price) if low_price else float(high_price)
+            item['Final Price']= min(float(low_price), float(high_price)) if low_price else high_price
             yield item
         except Exception as e:
             print("Error: ",e)
