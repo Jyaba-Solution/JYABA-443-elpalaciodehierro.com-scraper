@@ -1,15 +1,47 @@
 import scrapy
 import datetime
+import re
 
+# b-categories_navigation-link_1
 
 # scrapy.spiders.SitemapSpider
-class ElpalaciodeSpider(scrapy.spiders.SitemapSpider):
+class ElpalaciodeSpider(scrapy.Spider):
     name = 'elpalaciode'
-    sitemap_urls = [f'https://www.elpalaciodehierro.com/sitemap_{x}-product.xml' for x in range(0,20)]
-    sitemap_rules = [(r'.html', 'parse')]
-    #start_urls = ['https://www.elpalaciodehierro.com/under-armour-tenis-para-correr-shadow-hombre-41726918.html']
-
+    #sitemap_urls = [f'https://www.elpalaciodehierro.com/sitemap_{x}-product.xml' for x in range(0,20)]
+    #sitemap_rules = [(r'.html', 'parse')]
+    start_urls = ['https://www.elpalaciodehierro.com','https://www.elpalaciodehierro.com/on/demandware.static/-/Library-Sites-palacio-content-global/default/JSON/brands.json']
     def parse(self, response):
+
+        if '.json' in response.url:
+            brands = response.text
+            urls_list = re.findall('"href": "(.*)"',brands)
+            a_links = re.findall('"url": "(.*)"',brands)
+            urls_list.extend(a_links)
+            for brand in urls_list:
+                yield scrapy.Request(brand, callback=self.parse_category)
+        categories_list = response.xpath("//a[contains(@class, 'b-categories_navigation-link_2')]/@href").extract()
+        for category in categories_list:
+            if 'lista-marcas' in category:
+                pass
+            else:
+                yield scrapy.Request(category, callback=self.parse_category)
+    
+    def parse_category(self, response):
+        products = response.xpath("//a[contains(@class, 'b-product_tile-image')]/@href").extract()
+        for product in products:
+            url = response.urljoin(product)
+            yield scrapy.Request(url, callback=self.parse_product)
+        next_page = response.xpath("//i[@class='i-arrow-right-thin-after']").extract_first()
+        if not products:
+            with open('errors.txt', 'a') as f:
+                f.write(response.url+"\n")
+        if next_page:
+            next_page_url = response.xpath("//li[@class='b-pagination-elements_list b-next-btn']/a/@href").extract_first()
+            yield scrapy.Request(next_page_url, callback=self.parse_category)
+
+        
+
+    def parse_product(self, response):
 
         try:
             item = dict()
@@ -52,5 +84,6 @@ class ElpalaciodeSpider(scrapy.spiders.SitemapSpider):
             yield item
         except Exception as e:
             print("Error: ",e)
-            with open('errors.txt', 'a') as f:
+            with open('errors_again.txt', 'a') as f:
                 f.write(response.url+"\n")
+                breakpoint()
